@@ -124,9 +124,16 @@ class ContentMixin(object):
         if parent:
             metadata['parents'] = [parent]
         mime_type = _get_mimetype(basename)
+
         f = _tee_open(file_name, callbacks=read_callbacks)
 
-        m = MultipartEncoder(fields=OrderedDict([('metadata', json.dumps(metadata)),
+        if self._conf.getboolean('prepend', 'enabled')
+	    a = _tee_open(self._conf.get('prepend', 'path'), callbacks=read_callbacks)
+	    mime_type = _get_mimetype(os.path.basename(self._conf.get('prepend', 'path')))
+            m = MultipartEncoder(fields=OrderedDict([('metadata', json.dumps(metadata)),
+                                                 ('content', ('filename', a, f, mime_type))]))
+	else:
+            m = MultipartEncoder(fields=OrderedDict([('metadata', json.dumps(metadata)),
                                                  ('content', ('filename', f, mime_type))]))
 
         ok_codes = [http.CREATED]
@@ -300,6 +307,9 @@ class ContentMixin(object):
 
         chunk_start = kwargs.get('offset', 0)
         length = kwargs.get('length', 100 * 1024 ** 4)
+        if self._conf.getboolean('prepend', 'enabled')
+	    length += os.path.getsize(self._conf.get('prepend', 'path'))
+	    offset += os.path.getsize(self._conf.get('prepend', 'path'))
 
         dl_chunk_sz = self._conf.getint('transfer', 'dl_chunk_size')
 
